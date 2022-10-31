@@ -1,3 +1,5 @@
+mod terms_bank;
+
 use std::{
     io::{Read, Seek},
     path::Path,
@@ -5,8 +7,11 @@ use std::{
 
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
+use terms_bank::Term;
 use thiserror::Error;
 use zip::result::ZipError;
+
+use crate::terms_bank::TermTuple;
 
 #[derive(Deserialize_repr, Debug)]
 #[repr(u8)]
@@ -38,48 +43,9 @@ struct Index {
     frequency_mode: Option<FrequencyMode>,
 }
 
-#[derive(Deserialize, Debug)]
-struct WordTuple(
-    String,
-    String,
-    Option<String>,
-    String,
-    f32,
-    Vec<String>,
-    u32,
-    String,
-);
-
-#[derive(Debug)]
-struct Word {
-    text: String,
-    reading: String,
-    definition_tags: Option<String>, // Make vector
-    delinflection: String,           // Make vector
-    popularity: f32,
-    definitions: Vec<String>,
-    sequence: u32,
-    term_tags: String, // Make vector
-}
-
-impl From<WordTuple> for Word {
-    fn from(t: WordTuple) -> Self {
-        Word {
-            text: t.0,
-            reading: t.1,
-            definition_tags: t.2,
-            delinflection: t.3,
-            popularity: t.4,
-            definitions: t.5,
-            sequence: t.6,
-            term_tags: t.7,
-        }
-    }
-}
-
 pub struct Dict {
     index: Index,
-    words: Vec<Word>,
+    terms: Vec<Term>,
 }
 
 #[derive(Error, Debug)]
@@ -112,7 +78,7 @@ pub fn parse<R: Read + Seek>(reader: R) -> Result<Dict, YomiDictError> {
     let index: Index =
         serde_json::from_reader(index_json).or_else(|err| Err(YomiDictError::JsonError(err)))?;
 
-    let mut words: Vec<Word> = vec![];
+    let mut terms: Vec<Term> = vec![];
 
     for i in 0..archive.len() {
         let file = archive.by_index(i).or_else(|err| match err {
@@ -130,14 +96,14 @@ pub fn parse<R: Read + Seek>(reader: R) -> Result<Dict, YomiDictError> {
             None => continue,
         };
 
-        let data: Vec<WordTuple> =
+        let data: Vec<TermTuple> =
             serde_json::from_reader(file).or_else(|err| Err(YomiDictError::JsonError(err)))?;
-        words.extend(data.into_iter().map(|w| Word::from(w)));
+        terms.extend(data.into_iter().map(|w| Term::from(w)));
     }
 
-    words.sort_by_key(|w| w.sequence);
+    terms.sort_by_key(|w| w.sequence);
 
-    Ok(Dict { index, words })
+    Ok(Dict { index, terms })
 }
 
 #[cfg(test)]
