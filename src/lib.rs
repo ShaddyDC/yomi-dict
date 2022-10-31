@@ -1,3 +1,4 @@
+pub mod deinflect;
 mod kanji_bank;
 mod tag_bank;
 mod terms_bank;
