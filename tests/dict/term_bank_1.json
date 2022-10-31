@@ -1,0 +1,15 @@
+[
+    [
+        "some text",
+        "some reading",
+        null,
+        "some deinflections",
+        2.2,
+        [
+            "Def 1",
+            "Def 2"
+        ],
+        1,
+        "tag1"
+    ]
+]

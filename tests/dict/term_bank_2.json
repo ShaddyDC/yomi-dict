@@ -1,0 +1,15 @@
+[
+    [
+        "some text 2",
+        "some reading",
+        "definition_tag1 definition_tag2",
+        "some deinflections",
+        1.5,
+        [
+            "Def 1",
+            "Def 2"
+        ],
+        2,
+        "term_tag_1 term_tag_2"
+    ]
+]

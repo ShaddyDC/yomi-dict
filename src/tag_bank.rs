@@ -7,9 +7,9 @@ pub struct TagTuple(String, String, f32, String, f32);
 pub struct Tag {
     pub name: String,
     pub category: String,
-    pub sorting_key: f32,
+    pub order: f32,
     pub notes: String,
-    pub popularity: f32,
+    pub score: f32,
 }
 
 impl From<TagTuple> for Tag {
@@ -17,9 +17,9 @@ impl From<TagTuple> for Tag {
         Tag {
             name: t.0,
             category: t.1,
-            sorting_key: t.2,
+            order: t.2,
             notes: t.3,
-            popularity: t.4,
+            score: t.4,
         }
     }
 }

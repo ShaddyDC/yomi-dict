@@ -18,7 +18,7 @@ pub struct Kanji {
     pub onyomi: String,
     pub kunyomi: String,
     pub tags: String,
-    pub definitions: Vec<String>,
+    pub meanings: Vec<String>,
     pub stats: HashMap<String, String>,
 }
 
@@ -29,7 +29,7 @@ impl From<KanjiTuple> for Kanji {
             onyomi: t.1,
             kunyomi: t.2,
             tags: t.3,
-            definitions: t.4,
+            meanings: t.4,
             stats: t.5,
         }
     }

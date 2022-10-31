@@ -14,12 +14,12 @@ pub struct TermTuple(
 
 #[derive(Debug)]
 pub struct Term {
-    pub text: String,
+    pub expression: String,
     pub reading: String,
     pub definition_tags: Option<String>, // TODO Make vector
-    pub delinflection: String,           // TODO Make vector
-    pub popularity: f32,
-    pub definitions: Vec<String>,
+    pub rules: String,                   // TODO Make vector
+    pub score: f32,
+    pub glossary: Vec<String>,
     pub sequence: u32,
     pub term_tags: String, // TODO Make vector
 }
@@ -27,12 +27,12 @@ pub struct Term {
 impl From<TermTuple> for Term {
     fn from(t: TermTuple) -> Self {
         Term {
-            text: t.0,
+            expression: t.0,
             reading: t.1,
             definition_tags: t.2,
-            delinflection: t.3,
-            popularity: t.4,
-            definitions: t.5,
+            rules: t.3,
+            score: t.4,
+            glossary: t.5,
             sequence: t.6,
             term_tags: t.7,
         }

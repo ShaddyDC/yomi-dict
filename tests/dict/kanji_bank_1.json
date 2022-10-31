@@ -1,0 +1,16 @@
+[
+    [
+        "character",
+        "onyomi",
+        "kunyomi",
+        "tag1 tag2",
+        [
+            "Def 1",
+            "Def 2"
+        ],
+        {
+            "somestat1": "somevalue1",
+            "somestat2": "somevalue2"
+        }
+    ]
+]
