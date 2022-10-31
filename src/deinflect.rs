@@ -21,7 +21,7 @@ enum Rule {
 #[serde(try_from = "Vec<Rule>")]
 pub struct Rules(BitFlags<Rule>);
 
-impl<'a> From<Vec<Rule>> for Rules {
+impl From<Vec<Rule>> for Rules {
     fn from(v: Vec<Rule>) -> Self {
         let mut r = BitFlags::<Rule>::empty();
         r.extend(v);
