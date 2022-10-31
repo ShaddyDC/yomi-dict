@@ -11,7 +11,7 @@ use zip::result::ZipError;
 #[derive(Deserialize_repr, Debug)]
 #[repr(u8)]
 enum Version {
-    V1 = 1,
+    // V1 = 1, // We do not support version 1
     V2 = 2,
     V3 = 3,
 }
