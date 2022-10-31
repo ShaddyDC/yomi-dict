@@ -1,7 +1,12 @@
-use std::{fs, path::Path};
+use std::{
+    io::{Read, Seek},
+    path::Path,
+};
 
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
+use thiserror::Error;
+use zip::result::ZipError;
 
 #[derive(Deserialize_repr, Debug)]
 #[repr(u8)]
@@ -77,18 +82,47 @@ pub struct Dict {
     words: Vec<Word>,
 }
 
-pub fn parse(file: fs::File) -> Dict {
+#[derive(Error, Debug)]
+pub enum YomiDictError {
+    #[error("An IO error occured: `{0}`")]
+    Io(std::io::Error),
+    #[error("Archive is invalid: `{0}`")]
+    InvalidArchive(&'static str),
+    #[error("Archive is not supported: `{0}`")]
+    UnsupportedArchive(&'static str),
+    #[error("File index.json not found in archive")]
+    IndexNotFound,
+    #[error("Error parsing Json: `{0}`")]
+    JsonError(serde_json::Error),
+}
+
+pub fn parse<R: Read + Seek>(reader: R) -> Result<Dict, YomiDictError> {
     // let d: WordTuple = serde_json::from_str(r#"["ヽ","",null,"",2,["ヽ\n〘unc〙\nrepetition mark in katakana.\n→一の字点"],1,""]"#).unwrap();
 
-    let mut archive = zip::ZipArchive::new(&file).unwrap();
+    let mut archive = zip::ZipArchive::new(reader).or_else(|err| match err {
+        ZipError::InvalidArchive(s) => Err(YomiDictError::InvalidArchive(s)),
+        ZipError::UnsupportedArchive(s) => Err(YomiDictError::UnsupportedArchive(s)),
+        ZipError::Io(e) => Err(YomiDictError::Io(e)),
+        _ => Err(YomiDictError::UnsupportedArchive("Unknown error occured")),
+    })?;
 
-    let index_json = archive.by_name("index.json").expect("Need index.json");
-    let index: Index = serde_json::from_reader(index_json).unwrap();
+    let index_json = archive
+        .by_name("index.json")
+        .or_else(|_| Err(YomiDictError::IndexNotFound))?;
+    let index: Index =
+        serde_json::from_reader(index_json).or_else(|err| Err(YomiDictError::JsonError(err)))?;
 
     let mut words: Vec<Word> = vec![];
 
     for i in 0..archive.len() {
-        let file = archive.by_index(i).unwrap();
+        let file = archive.by_index(i).or_else(|err| match err {
+            ZipError::InvalidArchive(s) => Err(YomiDictError::InvalidArchive(s)),
+            ZipError::UnsupportedArchive(s) => Err(YomiDictError::UnsupportedArchive(s)),
+            ZipError::Io(e) => Err(YomiDictError::Io(e)),
+            ZipError::FileNotFound => Err(YomiDictError::InvalidArchive(
+                "Could not load expected file",
+            )),
+        })?;
 
         let fname = match file.enclosed_name() {
             Some(path) if path == Path::new("index.json") => continue,
@@ -96,13 +130,14 @@ pub fn parse(file: fs::File) -> Dict {
             None => continue,
         };
 
-        let data: Vec<WordTuple> = serde_json::from_reader(file).unwrap();
+        let data: Vec<WordTuple> =
+            serde_json::from_reader(file).or_else(|err| Err(YomiDictError::JsonError(err)))?;
         words.extend(data.into_iter().map(|w| Word::from(w)));
     }
 
     words.sort_by_key(|w| w.sequence);
 
-    Dict { index, words }
+    Ok(Dict { index, words })
 }
 
 #[cfg(test)]
@@ -116,6 +151,6 @@ mod tests {
         let fname = std::path::Path::new("dict.zip");
         let file = fs::File::open(&fname).unwrap();
 
-        parse(file);
+        parse(file).unwrap();
     }
 }
