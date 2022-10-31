@@ -16,12 +16,12 @@ pub struct TermTuple(
 pub struct Term {
     pub text: String,
     pub reading: String,
-    pub definition_tags: Option<String>, // Make vector
-    pub delinflection: String,           // Make vector
+    pub definition_tags: Option<String>, // TODO Make vector
+    pub delinflection: String,           // TODO Make vector
     pub popularity: f32,
     pub definitions: Vec<String>,
     pub sequence: u32,
-    pub term_tags: String, // Make vector
+    pub term_tags: String, // TODO Make vector
 }
 
 impl From<TermTuple> for Term {

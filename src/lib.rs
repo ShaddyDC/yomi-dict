@@ -71,12 +71,7 @@ pub enum YomiDictError {
     JsonError(serde_json::Error),
 }
 
-pub fn parse<R: Read + Seek>(reader: R) -> Result<Dict, YomiDictError> {
-    // let d: TermTuple = serde_json::from_str(
-    //     r#"["ヽ","",null,"",2,["ヽ\n〘unc〙\nrepetition mark in katakana.\n→一の字点"],1,""]"#,
-    // )
-    // .unwrap();
-
+pub fn read<R: Read + Seek>(reader: R) -> Result<Dict, YomiDictError> {
     let mut archive = zip::ZipArchive::new(reader).or_else(|err| match err {
         ZipError::InvalidArchive(s) => Err(YomiDictError::InvalidArchive(s)),
         ZipError::UnsupportedArchive(s) => Err(YomiDictError::UnsupportedArchive(s)),
@@ -135,19 +130,4 @@ pub fn parse<R: Read + Seek>(reader: R) -> Result<Dict, YomiDictError> {
         kanji,
         tags,
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use std::fs;
-
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let fname = std::path::Path::new("dict.zip");
-        let file = fs::File::open(&fname).unwrap();
-
-        parse(file).unwrap();
-    }
 }
