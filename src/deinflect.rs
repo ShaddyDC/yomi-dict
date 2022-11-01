@@ -39,7 +39,7 @@ struct ReasonInfo {
 }
 
 #[derive(Deserialize, Debug)]
-struct Reasons(HashMap<String, Vec<ReasonInfo>>);
+pub struct Reasons(HashMap<String, Vec<ReasonInfo>>);
 
 #[derive(Clone, Debug)]
 pub struct Deinflection {
@@ -58,9 +58,12 @@ impl Deinflection {
     }
 }
 
-pub fn create_deinflections(source: &str) -> Vec<Deinflection> {
-    let reasons: Reasons = serde_json::from_str(include_str!("deinflect.json")).unwrap();
+pub fn inflection_reasons() -> Reasons {
+    serde_json::from_str(include_str!("deinflect.json"))
+        .expect("Included deinflect.json file should be parsable")
+}
 
+pub fn create_deinflections(source: &str, reasons: &Reasons) -> Vec<Deinflection> {
     let mut results = vec![Deinflection::new(
         source.to_string(),
         Rules(BitFlags::<Rule>::empty()),
@@ -104,7 +107,9 @@ mod tests {
 
     #[test]
     fn deinflections() {
-        let d = create_deinflections("聞かれました");
+        let reasons = inflection_reasons();
+
+        let d = create_deinflections("聞かれました", &reasons);
 
         assert!(d.iter().any(|d| d.term.eq("聞かれる")));
         assert!(d.iter().any(|d| d.term.eq("聞く")));
