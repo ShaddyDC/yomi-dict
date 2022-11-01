@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 use enumflags2::{bitflags, BitFlags};
+use itertools::Itertools;
 use serde::Deserialize;
+use wana_kana::{to_hiragana::to_hiragana, to_katakana::to_katakana};
 
 #[bitflags]
 #[repr(u8)]
@@ -63,7 +65,7 @@ pub fn inflection_reasons() -> Reasons {
         .expect("Included deinflect.json file should be parsable")
 }
 
-pub fn create_deinflections(source: &str, reasons: &Reasons) -> Vec<Deinflection> {
+pub fn word_deinflections(source: &str, reasons: &Reasons) -> Vec<Deinflection> {
     let mut results = vec![Deinflection::new(
         source.to_string(),
         Rules(BitFlags::<Rule>::empty()),
@@ -101,6 +103,29 @@ pub fn create_deinflections(source: &str, reasons: &Reasons) -> Vec<Deinflection
     results
 }
 
+fn mutate(s: &str) -> Vec<String> {
+    // TODO Collapse emphatic sequensec
+    vec![s.to_owned(), to_hiragana(s), to_katakana(s)]
+}
+
+pub fn string_deinflections(source: &str, reasons: &Reasons) -> Vec<Deinflection> {
+    let substrings: Vec<String> = mutate(source)
+        .iter()
+        .flat_map(|s| {
+            (1..s.chars().count())
+                .rev()
+                .map(|i| &s[..s.chars().take(i).map(|c| c.len_utf8()).sum()])
+        })
+        .unique()
+        .map(|s| s.to_owned())
+        .collect();
+
+    substrings
+        .iter()
+        .flat_map(|s| word_deinflections(s, reasons))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -109,9 +134,19 @@ mod tests {
     fn deinflections() {
         let reasons = inflection_reasons();
 
-        let d = create_deinflections("聞かれました", &reasons);
+        let d = string_deinflections("聞かれました", &reasons);
 
         assert!(d.iter().any(|d| d.term.eq("聞かれる")));
         assert!(d.iter().any(|d| d.term.eq("聞く")));
+    }
+
+    #[test]
+    fn deinflections_romaji() {
+        let reasons = inflection_reasons();
+
+        let d = string_deinflections("kikaremashita", &reasons);
+
+        assert!(d.iter().any(|d| d.term.eq("きかれる")));
+        assert!(d.iter().any(|d| d.term.eq("きく")));
     }
 }
