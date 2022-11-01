@@ -64,14 +64,16 @@ pub struct Reasons(HashMap<String, Vec<ReasonInfo>>);
 pub struct Deinflection {
     pub term: String,
     pub rules: Rules,
+    pub source: String,
     pub reasons: Vec<String>,
 }
 
 impl Deinflection {
-    fn new(term: String, rules: Rules, reasons: Vec<String>) -> Deinflection {
+    fn new(term: String, rules: Rules, source: String, reasons: Vec<String>) -> Deinflection {
         Deinflection {
             term,
             rules,
+            source,
             reasons,
         }
     }
@@ -86,6 +88,7 @@ pub fn word_deinflections(source: &str, reasons: &Reasons) -> Vec<Deinflection> 
     let mut results = vec![Deinflection::new(
         source.to_string(),
         Rules(BitFlags::<Rule>::empty()),
+        source.to_string(),
         vec![],
     )];
 
@@ -109,6 +112,7 @@ pub fn word_deinflections(source: &str, reasons: &Reasons) -> Vec<Deinflection> 
                         .to_string()
                         + (&v.kana_out),
                     v.rules_out.clone(),
+                    source.to_string(),
                     std::iter::once(reason.clone())
                         .chain(prev.reasons.iter().cloned())
                         .collect(),

@@ -36,6 +36,8 @@ where
     let mut r = BitFlags::<Rule>::empty();
     r.extend(
         s.split(' ')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
             .map(|s| Rule::try_from(s).map_err(D::Error::custom))
             .collect::<Result<Vec<Rule>, _>>()?,
     );
@@ -45,8 +47,8 @@ where
 impl From<TermTuple> for Term {
     fn from(t: TermTuple) -> Self {
         Term {
+            reading: if t.1.is_empty() { t.0.clone() } else { t.1 },
             expression: t.0,
-            reading: t.1,
             definition_tags: t.2,
             rules: t.3,
             score: t.4,
