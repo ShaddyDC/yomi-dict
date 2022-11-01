@@ -3,7 +3,7 @@
         "some text 2",
         "some reading",
         "definition_tag1 definition_tag2",
-        "some deinflections",
+        "v5",
         1.5,
         [
             "Def 1",
@@ -11,5 +11,17 @@
         ],
         2,
         "term_tag_1 term_tag_2"
+    ],
+    [
+        "聞く",
+        "きく",
+        "",
+        "v5",
+        20,
+        [
+            "きく【聞く・聴く】\n〘v5k・vt〙\n1 to hear."
+        ],
+        3,
+        ""
     ]
 ]

@@ -9,7 +9,7 @@ use wana_kana::{to_hiragana::to_hiragana, to_katakana::to_katakana};
 #[repr(u8)]
 #[derive(Deserialize, Copy, Clone, Debug, PartialEq)]
 #[serde(rename_all = "kebab-case")]
-enum Rule {
+pub(crate) enum Rule {
     V1 = 0b00000001,   // Verb ichidan
     V5 = 0b00000010,   // Verb godan
     Vs = 0b00000100,   // Verb suru
@@ -19,9 +19,26 @@ enum Rule {
     Iru = 0b01000000,  // Intermediate -iru endings for progressive or perfect tense
 }
 
+impl TryFrom<&str> for Rule {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Rule, Self::Error> {
+        match value {
+            "v1" => Ok(Rule::V1),
+            "v5" => Ok(Rule::V5),
+            "vs" => Ok(Rule::Vs),
+            "vk" => Ok(Rule::Vk),
+            "vz" => Ok(Rule::Vz),
+            "adj-i" => Ok(Rule::AdjI),
+            "iru" => Ok(Rule::Iru),
+            _ => Err(format!("String `{}` is not a valid Rule", value)),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Clone)]
 #[serde(try_from = "Vec<Rule>")]
-pub struct Rules(BitFlags<Rule>);
+pub struct Rules(pub(crate) BitFlags<Rule>);
 
 impl From<Vec<Rule>> for Rules {
     fn from(v: Vec<Rule>) -> Self {
