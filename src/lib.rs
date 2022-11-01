@@ -2,6 +2,7 @@ pub mod deinflect;
 mod kanji_bank;
 mod tag_bank;
 mod terms_bank;
+pub mod translator;
 
 use std::{
     io::{Read, Seek},
@@ -113,7 +114,6 @@ pub fn read<R: Read + Seek>(reader: R) -> Result<Dict, YomiDictError> {
             }
 
             Some(path) if path.to_string_lossy().starts_with("tag_bank_") => {
-                println!("Reading tags");
                 let data: Vec<TagTuple> =
                     serde_json::from_reader(file).map_err(YomiDictError::JsonError)?;
                 tags.extend(data.into_iter().map(Tag::from));
