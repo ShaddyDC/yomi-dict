@@ -10,7 +10,7 @@ use crate::{
 pub struct DictEntry<'a> {
     pub term: &'a Term,
     pub reasons: Vec<String>,
-    pub source_match: String,
+    pub source_len: usize,
     pub primary_match: bool,
 }
 
@@ -32,28 +32,23 @@ pub fn gather_terms<'d>(text: &str, reasons: &Reasons, dict: &'d Dict) -> Vec<Di
     dict.terms
         .iter()
         .filter_map(|term| {
-            if deinflections.contains_key(&term.expression)
-                && deinflections[&term.expression]
-                    .iter()
-                    .any(|d| d.rules.0.is_empty() || !(d.rules.0 & term.rules.0).is_empty())
-            {
-                return Some(DictEntry {
-                    term,
-                    reasons: deinflections[&term.expression][0].reasons.clone(),
-                    source_match: deinflections[&term.expression][0].source.clone(), // TODO: Make sure longest is included and rules match
-                    primary_match: true,
-                });
-            } else if deinflections.contains_key(&term.reading)
-                && deinflections[&term.reading]
-                    .iter()
-                    .any(|d| d.rules.0.is_empty() || !(d.rules.0 & term.rules.0).is_empty())
-            {
-                return Some(DictEntry {
-                    term,
-                    reasons: deinflections[&term.reading][0].reasons.clone(),
-                    source_match: deinflections[&term.reading][0].source.clone(),
-                    primary_match: false,
-                });
+            for value in [&term.expression, &term.reading] {
+                if deinflections.contains_key(value) {
+                    let mut reasons = deinflections[value]
+                        .iter()
+                        .filter(|d| d.rules.0.is_empty() || !(d.rules.0 & term.rules.0).is_empty())
+                        .sorted_unstable_by_key(|d| {
+                            i64::try_from(d.reasons.len()).map_or(i64::MIN, |n| -n)
+                        });
+                    if let Some(d) = reasons.next() {
+                        return Some(DictEntry {
+                            term,
+                            reasons: d.reasons.clone(),
+                            source_len: d.source.chars().count(),
+                            primary_match: value == &term.expression,
+                        });
+                    }
+                }
             }
             None
         })
@@ -62,8 +57,6 @@ pub fn gather_terms<'d>(text: &str, reasons: &Reasons, dict: &'d Dict) -> Vec<Di
 
 pub fn get_terms<'d>(text: &str, reasons: &Reasons, dict: &'d Dict) -> Vec<DictEntries<'d>> {
     let entries = gather_terms(text, reasons, dict);
-
-    // TODO: Lengths doesn't refer to "string length" but byte length
 
     entries
         .into_iter()
@@ -77,48 +70,24 @@ pub fn get_terms<'d>(text: &str, reasons: &Reasons, dict: &'d Dict) -> Vec<DictE
                 reading: key.1,
                 entries: entries
                     .into_iter()
-                    .sorted_unstable_by(|a, b| {
-                        b.term
-                            .score
-                            .partial_cmp(&a.term.score)
-                            .unwrap_or(std::cmp::Ordering::Equal)
-                            .then(b.term.glossary.len().cmp(&a.term.glossary.len()))
+                    .sorted_unstable_by_key(|e| {
+                        (
+                            -e.term.score,
+                            i64::try_from(e.term.glossary.len()).map_or(i64::MIN, |n| -n),
+                        )
                     })
                     .collect::<Vec<_>>(),
             }
         })
-        .sorted_unstable_by(|a, b| {
+        .sorted_unstable_by_key(|e| {
             // Sort words
-
-            match (
-                b.entries[0].source_match.len(),
-                a.entries[0].reasons.len(),
-                b.entries[0].primary_match,
+            (
+                i64::try_from(e.entries[0].source_len).map_or(i64::MIN, |n| -n),
+                e.entries[0].reasons.len(),
+                !e.entries[0].primary_match,
+                -e.entries[0].term.score,
+                i64::try_from(e.entries[0].term.glossary.len()).map_or(i64::MIN, |n| -n),
             )
-                .cmp(&(
-                    a.entries[0].source_match.len(),
-                    b.entries[0].reasons.len(),
-                    a.entries[0].primary_match,
-                )) {
-                std::cmp::Ordering::Equal => (),
-                res => return res,
-            }
-
-            match b.entries[0]
-                .term
-                .score
-                .partial_cmp(&a.entries[0].term.score)
-            {
-                Some(std::cmp::Ordering::Equal) => (),
-                None => (),
-                Some(res) => return res,
-            }
-
-            b.entries[0]
-                .term
-                .glossary
-                .len()
-                .cmp(&a.entries[0].term.glossary.len())
         })
         .collect::<Vec<_>>()
 }
