@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use enumflags2::BitFlags;
-use serde::{de::Error, Deserialize, Deserializer};
+use serde::{de::Error, Deserialize, Deserializer, Serialize};
 
 use crate::deinflect::{Rule, Rules};
 
@@ -17,7 +17,7 @@ pub struct TermTuple(
     String,
 );
 
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Score(f32);
 
 impl Ord for Score {
@@ -42,7 +42,7 @@ impl std::ops::Neg for Score {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Term {
     pub expression: String,
     pub reading: String,

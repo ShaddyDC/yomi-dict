@@ -10,8 +10,8 @@ use std::{
 };
 
 use kanji_bank::Kanji;
-use serde::Deserialize;
-use serde_repr::Deserialize_repr;
+use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use terms_bank::Term;
 use thiserror::Error;
 use zip::result::ZipError;
@@ -22,7 +22,7 @@ use crate::{
     terms_bank::TermTuple,
 };
 
-#[derive(Deserialize_repr, Debug)]
+#[derive(Deserialize_repr, Serialize_repr, Debug)]
 #[repr(u8)]
 pub enum Version {
     // V1 = 1, // We do not support version 1
@@ -30,14 +30,14 @@ pub enum Version {
     V3 = 3,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub enum FrequencyMode {
     OccurenceBased,
     RankBased,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Index {
     pub title: String,
@@ -52,6 +52,7 @@ pub struct Index {
     pub frequency_mode: Option<FrequencyMode>,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct Dict {
     pub index: Index,
     pub terms: Vec<Term>,
