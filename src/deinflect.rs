@@ -10,27 +10,27 @@ use wana_kana::{to_hiragana::to_hiragana, to_katakana::to_katakana};
 #[derive(Deserialize, Copy, Clone, Debug, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum Rule {
-    V1 = 0b00000001,   // Verb ichidan
-    V5 = 0b00000010,   // Verb godan
-    Vs = 0b00000100,   // Verb suru
-    Vk = 0b00001000,   // Verb kuru
-    Vz = 0b00010000,   // Verb zuru
-    AdjI = 0b00100000, // Adjective i
-    Iru = 0b01000000,  // Intermediate -iru endings for progressive or perfect tense
+    V1 = 0b0000_0001,   // Verb ichidan
+    V5 = 0b0000_0010,   // Verb godan
+    Vs = 0b0000_0100,   // Verb suru
+    Vk = 0b0000_1000,   // Verb kuru
+    Vz = 0b0001_0000,   // Verb zuru
+    AdjI = 0b0010_0000, // Adjective i
+    Iru = 0b0100_0000,  // Intermediate -iru endings for progressive or perfect tense
 }
 
 impl TryFrom<&str> for Rule {
     type Error = String;
 
-    fn try_from(value: &str) -> Result<Rule, Self::Error> {
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
-            "v1" => Ok(Rule::V1),
-            "v5" => Ok(Rule::V5),
-            "vs" => Ok(Rule::Vs),
-            "vk" => Ok(Rule::Vk),
-            "vz" => Ok(Rule::Vz),
-            "adj-i" => Ok(Rule::AdjI),
-            "iru" => Ok(Rule::Iru),
+            "v1" => Ok(Self::V1),
+            "v5" => Ok(Self::V5),
+            "vs" => Ok(Self::Vs),
+            "vk" => Ok(Self::Vk),
+            "vz" => Ok(Self::Vz),
+            "adj-i" => Ok(Self::AdjI),
+            "iru" => Ok(Self::Iru),
             _ => Err(format!("String `{}` is not a valid Rule", value)),
         }
     }
@@ -44,7 +44,7 @@ impl From<Vec<Rule>> for Rules {
     fn from(v: Vec<Rule>) -> Self {
         let mut r = BitFlags::<Rule>::empty();
         r.extend(v);
-        Rules(r)
+        Self(r)
     }
 }
 
@@ -69,8 +69,8 @@ pub struct Deinflection {
 }
 
 impl Deinflection {
-    fn new(term: String, rules: Rules, source: String, reasons: Vec<String>) -> Deinflection {
-        Deinflection {
+    fn new(term: String, rules: Rules, source: String, reasons: Vec<String>) -> Self {
+        Self {
             term,
             rules,
             source,
@@ -79,11 +79,13 @@ impl Deinflection {
     }
 }
 
+#[must_use]
 pub fn inflection_reasons() -> Reasons {
     serde_json::from_str(include_str!("deinflect.json"))
         .expect("Included deinflect.json file should be parsable")
 }
 
+#[must_use]
 pub fn word_deinflections(source: &str, reasons: &Reasons) -> Vec<Deinflection> {
     let mut results = vec![Deinflection::new(
         source.to_string(),
@@ -129,16 +131,17 @@ fn mutate(s: &str) -> Vec<String> {
     vec![s.to_owned(), to_hiragana(s), to_katakana(s)]
 }
 
+#[must_use]
 pub fn string_deinflections(source: &str, reasons: &Reasons) -> Vec<Deinflection> {
     let substrings: Vec<String> = mutate(source)
         .iter()
         .flat_map(|s| {
             (1..s.chars().count())
                 .rev()
-                .map(|i| &s[..s.chars().take(i).map(|c| c.len_utf8()).sum()])
+                .map(|i| &s[..s.chars().take(i).map(char::len_utf8).sum()])
         })
         .unique()
-        .map(|s| s.to_owned())
+        .map(std::borrow::ToOwned::to_owned)
         .collect();
 
     substrings

@@ -73,12 +73,15 @@ pub enum YomiDictError {
     JsonError(serde_json::Error),
 }
 
+/// # Errors
+///
+/// Will return `Err` if dictionary couldn't be read.
 pub fn read<R: Read + Seek>(reader: R) -> Result<Dict, YomiDictError> {
     let mut archive = zip::ZipArchive::new(reader).map_err(|err| match err {
         ZipError::InvalidArchive(s) => YomiDictError::InvalidArchive(s),
         ZipError::UnsupportedArchive(s) => YomiDictError::UnsupportedArchive(s),
         ZipError::Io(e) => YomiDictError::Io(e),
-        _ => YomiDictError::UnsupportedArchive("Unknown error occured"),
+        ZipError::FileNotFound => YomiDictError::UnsupportedArchive("Unknown error occured"),
     })?;
 
     let index_json = archive

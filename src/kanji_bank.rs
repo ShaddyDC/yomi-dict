@@ -24,7 +24,7 @@ pub struct Kanji {
 
 impl From<KanjiTuple> for Kanji {
     fn from(t: KanjiTuple) -> Self {
-        Kanji {
+        Self {
             character: t.0,
             onyomi: t.1,
             kunyomi: t.2,

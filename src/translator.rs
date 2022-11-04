@@ -21,6 +21,7 @@ pub struct DictEntries<'a> {
     pub entries: Vec<DictEntry<'a>>,
 }
 
+#[must_use]
 pub fn gather_terms<'d>(text: &str, reasons: &Reasons, dict: &'d Dict) -> Vec<DictEntry<'d>> {
     let deinflections = string_deinflections(text, reasons);
 
@@ -55,6 +56,7 @@ pub fn gather_terms<'d>(text: &str, reasons: &Reasons, dict: &'d Dict) -> Vec<Di
         .collect()
 }
 
+#[must_use]
 pub fn get_terms<'d>(text: &str, reasons: &Reasons, dict: &'d Dict) -> Vec<DictEntries<'d>> {
     let entries = gather_terms(text, reasons, dict);
 

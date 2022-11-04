@@ -14,7 +14,7 @@ pub struct Tag {
 
 impl From<TagTuple> for Tag {
     fn from(t: TagTuple) -> Self {
-        Tag {
+        Self {
             name: t.0,
             category: t.1,
             order: t.2,
