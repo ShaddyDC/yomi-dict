@@ -1,3 +1,4 @@
+pub mod db;
 pub mod deinflect;
 mod kanji_bank;
 mod tag_bank;
@@ -72,6 +73,8 @@ pub enum YomiDictError {
     IndexNotFound,
     #[error("Error parsing Json: `{0}`")]
     JsonError(serde_json::Error),
+    #[error("Error with db: `{0}`")]
+    DbError(gluesql::core::result::Error),
 }
 
 /// # Errors

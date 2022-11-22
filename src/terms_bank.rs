@@ -18,7 +18,7 @@ pub struct TermTuple(
 );
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct Score(f32);
+pub struct Score(pub f32);
 
 impl Ord for Score {
     fn cmp(&self, other: &Self) -> Ordering {
