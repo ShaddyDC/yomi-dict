@@ -1,69 +1,85 @@
 use itertools::Itertools;
 
 use crate::{
+    db::DB,
     deinflect::{string_deinflections, Reasons},
     terms_bank::Term,
-    Dict,
+    YomiDictError,
 };
 
 #[derive(Debug)]
-pub struct DictEntry<'a> {
-    pub term: &'a Term,
+pub struct DictEntry {
+    pub term: Term,
     pub reasons: Vec<String>,
     pub source_len: usize,
     pub primary_match: bool,
 }
 
 #[derive(Debug)]
-pub struct DictEntries<'a> {
-    pub expression: &'a str,
-    pub reading: &'a str,
-    pub entries: Vec<DictEntry<'a>>,
+pub struct DictEntries {
+    pub expression: String,
+    pub reading: String,
+    pub entries: Vec<DictEntry>,
 }
 
-#[must_use]
-pub fn gather_terms<'d>(text: &str, reasons: &Reasons, dict: &'d Dict) -> Vec<DictEntry<'d>> {
+pub async fn gather_terms(
+    text: &str,
+    reasons: &Reasons,
+    db: &DB,
+) -> Result<Vec<DictEntry>, YomiDictError> {
     let deinflections = string_deinflections(text, reasons);
+
+    let strings = deinflections.iter().map(|d| d.term.as_str());
 
     let deinflections = deinflections
         .iter()
         .into_grouping_map_by(|d| &d.term)
         .collect::<Vec<_>>();
 
-    dict.terms
-        .iter()
+    let terms = db
+        .get_terms(strings)
+        .await?
+        .into_iter()
         .filter_map(|term| {
-            for value in [&term.expression, &term.reading] {
-                if deinflections.contains_key(value) {
-                    let mut reasons = deinflections[value]
-                        .iter()
-                        .filter(|d| d.rules.0.is_empty() || !(d.rules.0 & term.rules.0).is_empty())
-                        .sorted_unstable_by_key(|d| {
-                            i64::try_from(d.reasons.len()).map_or(i64::MIN, |n| -n)
-                        });
-                    if let Some(d) = reasons.next() {
-                        return Some(DictEntry {
-                            term,
-                            reasons: d.reasons.clone(),
-                            source_len: d.source.chars().count(),
-                            primary_match: value == &term.expression,
-                        });
-                    }
-                }
+            let (deinflections, primary_match) = if deinflections.contains_key(&term.expression) {
+                (&deinflections[&term.expression], true)
+            } else if deinflections.contains_key(&term.reading) {
+                (&deinflections[&term.reading], false)
+            } else {
+                panic!("One of these should always be given");
+            };
+
+            let mut reasons = deinflections
+                .iter()
+                .filter(|d| d.rules.0.is_empty() || !(d.rules.0 & term.rules.0).is_empty())
+                .sorted_unstable_by(|a, b| b.reasons.len().cmp(&a.reasons.len()));
+
+            if let Some(d) = reasons.next() {
+                return Some(DictEntry {
+                    term,
+                    reasons: d.reasons.clone(),
+                    source_len: d.source.chars().count(),
+                    primary_match,
+                });
             }
+
             None
         })
-        .collect()
+        .collect();
+
+    Ok(terms)
 }
 
-#[must_use]
-pub fn get_terms<'d>(text: &str, reasons: &Reasons, dict: &'d Dict) -> Vec<DictEntries<'d>> {
-    let entries = gather_terms(text, reasons, dict);
+pub async fn get_terms(
+    text: &str,
+    reasons: &Reasons,
+    db: &DB,
+) -> Result<Vec<DictEntries>, YomiDictError> {
+    let entries = gather_terms(text, reasons, db).await?;
 
-    entries
+    let terms = entries
         .into_iter()
-        .into_grouping_map_by(|t| (&t.term.expression, &t.term.reading))
-        .collect::<Vec<_>>()
+        .into_group_map_by(|t| (t.term.expression.clone(), t.term.reading.clone()))
         .into_iter()
         .map(|(key, entries)| {
             // Sort definitions in same word
@@ -91,5 +107,7 @@ pub fn get_terms<'d>(text: &str, reasons: &Reasons, dict: &'d Dict) -> Vec<DictE
                 i64::try_from(e.entries[0].term.glossary.len()).map_or(i64::MIN, |n| -n),
             )
         })
-        .collect::<Vec<_>>()
+        .collect::<Vec<_>>();
+
+    Ok(terms)
 }

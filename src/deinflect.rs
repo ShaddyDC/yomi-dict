@@ -2,12 +2,12 @@ use std::collections::HashMap;
 
 use enumflags2::{bitflags, BitFlags};
 use itertools::Itertools;
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer, Serialize};
 use wana_kana::{to_hiragana::to_hiragana, to_katakana::to_katakana};
 
 #[bitflags]
 #[repr(u8)]
-#[derive(Deserialize, Copy, Clone, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Copy, Clone, Debug, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum Rule {
     V1 = 0b0000_0001,   // Verb ichidan
@@ -36,8 +36,7 @@ impl TryFrom<&str> for Rule {
     }
 }
 
-#[derive(Debug, Deserialize, Clone)]
-#[serde(try_from = "Vec<Rule>")]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Rules(pub(crate) BitFlags<Rule>);
 
 impl From<Vec<Rule>> for Rules {
@@ -48,12 +47,23 @@ impl From<Vec<Rule>> for Rules {
     }
 }
 
+fn from_vec<'de, D>(deserializer: D) -> Result<Rules, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let v: Vec<Rule> = Deserialize::deserialize(deserializer)?;
+
+    Ok(Rules::from(v))
+}
+
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct ReasonInfo {
     kana_in: String,
     kana_out: String,
+    #[serde(deserialize_with = "from_vec")]
     rules_in: Rules,
+    #[serde(deserialize_with = "from_vec")]
     rules_out: Rules,
 }
 

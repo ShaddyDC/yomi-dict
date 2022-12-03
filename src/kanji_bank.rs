@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Debug)]
 pub struct KanjiTuple(
@@ -12,7 +12,7 @@ pub struct KanjiTuple(
     HashMap<String, String>,
 );
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Kanji {
     pub character: String,
     pub onyomi: String,
