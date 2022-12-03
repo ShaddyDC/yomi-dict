@@ -1,3 +1,4 @@
+pub mod db;
 pub mod deinflect;
 mod kanji_bank;
 mod tag_bank;
@@ -72,6 +73,10 @@ pub enum YomiDictError {
     IndexNotFound,
     #[error("Error parsing Json: `{0}`")]
     JsonError(serde_json::Error),
+    #[error("Error parsing JSObject: `{0}`")]
+    JsobjError(serde_wasm_bindgen::Error),
+    #[error("Error with storage: `{0}`")]
+    StorageError(rexie::Error),
 }
 
 /// # Errors
