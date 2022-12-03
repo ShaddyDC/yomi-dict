@@ -159,6 +159,7 @@ impl DB {
         let terms = queries
             .into_iter()
             .filter_map(std::result::Result::ok)
+            .filter(|obj| !obj.is_undefined())
             .map(|jobj| serde_wasm_bindgen::from_value(jobj).map_err(YomiDictError::JsobjError))
             .collect::<Result<Vec<_>, _>>()?;
 
