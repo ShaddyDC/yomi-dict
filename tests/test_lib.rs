@@ -1,12 +1,12 @@
 use std::io::Cursor;
 
-use yomi_dict::read;
+use yomi_dict::Dict;
 
 #[test]
 fn test_read_dict() {
     let file = include_bytes!("dict.zip");
 
-    let d = read(Cursor::new(file)).unwrap();
+    let d = Dict::new(Cursor::new(file)).unwrap();
 
     assert_eq!(d.index.title, "testDict");
     assert!(!d.terms.is_empty() && d.terms[0].expression == "some text");

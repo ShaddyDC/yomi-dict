@@ -79,62 +79,66 @@ pub enum YomiDictError {
     StorageError(rexie::Error),
 }
 
-/// # Errors
-///
-/// Will return `Err` if dictionary couldn't be read.
-pub fn read<R: Read + Seek>(reader: R) -> Result<Dict, YomiDictError> {
-    let mut archive = zip::ZipArchive::new(reader).map_err(|err| match err {
-        ZipError::InvalidArchive(s) => YomiDictError::InvalidArchive(s),
-        ZipError::UnsupportedArchive(s) => YomiDictError::UnsupportedArchive(s),
-        ZipError::Io(e) => YomiDictError::Io(e),
-        ZipError::FileNotFound => YomiDictError::UnsupportedArchive("Unknown error occured"),
-    })?;
-
-    let index_json = archive
-        .by_name("index.json")
-        .map_err(|_| YomiDictError::IndexNotFound)?;
-    let index: Index = serde_json::from_reader(index_json).map_err(YomiDictError::JsonError)?;
-
-    let mut terms: Vec<Term> = vec![];
-    let mut kanji: Vec<Kanji> = vec![];
-    let mut tags: Vec<Tag> = vec![];
-
-    for i in 0..archive.len() {
-        let file = archive.by_index(i).map_err(|err| match err {
+impl Dict {
+    /// # Errors
+    ///
+    /// Will return `Err` if dictionary couldn't be read.
+    pub fn new<R: Read + Seek>(reader: R) -> Result<Self, YomiDictError> {
+        let mut archive = zip::ZipArchive::new(reader).map_err(|err| match err {
             ZipError::InvalidArchive(s) => YomiDictError::InvalidArchive(s),
             ZipError::UnsupportedArchive(s) => YomiDictError::UnsupportedArchive(s),
             ZipError::Io(e) => YomiDictError::Io(e),
-            ZipError::FileNotFound => YomiDictError::InvalidArchive("Could not load expected file"),
+            ZipError::FileNotFound => YomiDictError::UnsupportedArchive("Unknown error occured"),
         })?;
 
-        match file.enclosed_name() {
-            Some(path) if path == Path::new("index.json") => continue,
+        let index_json = archive
+            .by_name("index.json")
+            .map_err(|_| YomiDictError::IndexNotFound)?;
+        let index: Index = serde_json::from_reader(index_json).map_err(YomiDictError::JsonError)?;
 
-            Some(path) if path.to_string_lossy().starts_with("term_bank_") => {
-                let data: Vec<TermTuple> =
-                    serde_json::from_reader(file).map_err(YomiDictError::JsonError)?;
-                terms.extend(data.into_iter().map(Term::from));
-            }
+        let mut terms: Vec<Term> = vec![];
+        let mut kanji: Vec<Kanji> = vec![];
+        let mut tags: Vec<Tag> = vec![];
 
-            Some(path) if path.to_string_lossy().starts_with("kanji_bank_") => {
-                let data: Vec<KanjiTuple> =
-                    serde_json::from_reader(file).map_err(YomiDictError::JsonError)?;
-                kanji.extend(data.into_iter().map(Kanji::from));
-            }
+        for i in 0..archive.len() {
+            let file = archive.by_index(i).map_err(|err| match err {
+                ZipError::InvalidArchive(s) => YomiDictError::InvalidArchive(s),
+                ZipError::UnsupportedArchive(s) => YomiDictError::UnsupportedArchive(s),
+                ZipError::Io(e) => YomiDictError::Io(e),
+                ZipError::FileNotFound => {
+                    YomiDictError::InvalidArchive("Could not load expected file")
+                }
+            })?;
 
-            Some(path) if path.to_string_lossy().starts_with("tag_bank_") => {
-                let data: Vec<TagTuple> =
-                    serde_json::from_reader(file).map_err(YomiDictError::JsonError)?;
-                tags.extend(data.into_iter().map(Tag::from));
-            }
-            _ => continue,
-        };
+            match file.enclosed_name() {
+                Some(path) if path == Path::new("index.json") => continue,
+
+                Some(path) if path.to_string_lossy().starts_with("term_bank_") => {
+                    let data: Vec<TermTuple> =
+                        serde_json::from_reader(file).map_err(YomiDictError::JsonError)?;
+                    terms.extend(data.into_iter().map(Term::from));
+                }
+
+                Some(path) if path.to_string_lossy().starts_with("kanji_bank_") => {
+                    let data: Vec<KanjiTuple> =
+                        serde_json::from_reader(file).map_err(YomiDictError::JsonError)?;
+                    kanji.extend(data.into_iter().map(Kanji::from));
+                }
+
+                Some(path) if path.to_string_lossy().starts_with("tag_bank_") => {
+                    let data: Vec<TagTuple> =
+                        serde_json::from_reader(file).map_err(YomiDictError::JsonError)?;
+                    tags.extend(data.into_iter().map(Tag::from));
+                }
+                _ => continue,
+            };
+        }
+
+        Ok(Self {
+            index,
+            terms,
+            kanji,
+            tags,
+        })
     }
-
-    Ok(Dict {
-        index,
-        terms,
-        kanji,
-        tags,
-    })
 }

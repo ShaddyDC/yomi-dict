@@ -14,7 +14,7 @@ async fn test_find_terms() {
 
     let file = include_bytes!("dict.zip");
 
-    let dict = read(Cursor::new(file)).unwrap();
+    let dict = Dict::new(Cursor::new(file)).unwrap();
     let reasons = inflection_reasons();
 
     let db = DB::new("test_find_terms").await.unwrap();
