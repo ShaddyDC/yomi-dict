@@ -3,7 +3,7 @@
 use futures::future::join_all;
 use rexie::{Index, ObjectStore, Rexie};
 
-use crate::{terms_bank::Term, Dict, YomiDictError};
+use crate::{kanji_bank::Kanji, tag_bank::Tag, terms_bank::Term, Dict, YomiDictError};
 
 pub struct DB {
     rexie: Rexie,
@@ -17,7 +17,7 @@ impl DB {
                 ObjectStore::new("dictionaries")
                     .key_path("id")
                     .auto_increment(true)
-                    .add_index(Index::new("name", "name")),
+                    .add_index(Index::new("title", "title")),
             )
             .add_object_store(ObjectStore::new("tags").key_path("id").auto_increment(true))
             .add_object_store(
@@ -54,21 +54,22 @@ impl DB {
             .map_err(YomiDictError::StorageError)?;
 
         let dict_index = dictionaries
-            .index("name")
+            .index("title")
             .map_err(YomiDictError::StorageError)?;
 
-        match dict_index
+        if !dict_index
             .get(
                 &serde_wasm_bindgen::to_value(&dict.index.title)
                     .map_err(YomiDictError::JsobjError)?,
             )
             .await
+            .map_err(YomiDictError::StorageError)?
+            .is_undefined()
         {
-            Ok(v) => println!("V: {:?}", v),
-            Err(e) => println!("E: {:?}", e),
+            return Ok(()); // TODO duplicate error?
         }
 
-        dictionaries
+        let dict_id = dictionaries
             .put(
                 &serde_wasm_bindgen::to_value(&dict.index).map_err(YomiDictError::JsobjError)?,
                 None,
@@ -76,10 +77,13 @@ impl DB {
             .await
             .map_err(YomiDictError::StorageError)?;
 
+        let dict_id: u8 =
+            serde_wasm_bindgen::from_value(dict_id).map_err(YomiDictError::JsobjError)?;
+
         let tags = transaction
             .store("tags")
             .map_err(YomiDictError::StorageError)?;
-        for tag in dict.tags {
+        for tag in dict.tags.into_iter().map(|t| Tag { dict_id, ..t }) {
             tags.put(
                 &serde_wasm_bindgen::to_value(&tag).map_err(YomiDictError::JsobjError)?,
                 None,
@@ -91,7 +95,7 @@ impl DB {
         let terms = transaction
             .store("terms")
             .map_err(YomiDictError::StorageError)?;
-        for term in dict.terms {
+        for term in dict.terms.into_iter().map(|t| Term { dict_id, ..t }) {
             terms
                 .put(
                     &serde_wasm_bindgen::to_value(&term).map_err(YomiDictError::JsobjError)?,
@@ -104,7 +108,7 @@ impl DB {
         let kanjis = transaction
             .store("kanji")
             .map_err(YomiDictError::StorageError)?;
-        for kanji in dict.kanji {
+        for kanji in dict.kanji.into_iter().map(|k| Kanji { dict_id, ..k }) {
             kanjis
                 .put(
                     &serde_wasm_bindgen::to_value(&kanji).map_err(YomiDictError::JsobjError)?,

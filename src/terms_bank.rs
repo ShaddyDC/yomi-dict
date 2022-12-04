@@ -52,6 +52,7 @@ pub struct Term {
     pub glossary: Vec<String>,
     pub sequence: u32,
     pub term_tags: String, // TODO Make vector
+    pub dict_id: u8,
 }
 
 fn from_string<'de, D>(deserializer: D) -> Result<Rules, D::Error>
@@ -82,6 +83,7 @@ impl From<TermTuple> for Term {
             glossary: t.5,
             sequence: t.6,
             term_tags: t.7,
+            dict_id: 0,
         }
     }
 }

@@ -90,6 +90,7 @@ pub async fn get_terms(
                     .into_iter()
                     .sorted_unstable_by_key(|e| {
                         (
+                            e.term.dict_id,
                             -e.term.score,
                             i64::try_from(e.term.glossary.len()).map_or(i64::MIN, |n| -n),
                         )
@@ -100,6 +101,7 @@ pub async fn get_terms(
         .sorted_unstable_by_key(|e| {
             // Sort words
             (
+                e.entries[0].term.dict_id,
                 i64::try_from(e.entries[0].source_len).map_or(i64::MIN, |n| -n),
                 e.entries[0].reasons.len(),
                 !e.entries[0].primary_match,

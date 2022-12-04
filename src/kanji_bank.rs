@@ -20,6 +20,7 @@ pub struct Kanji {
     pub tags: String,
     pub meanings: Vec<String>,
     pub stats: HashMap<String, String>,
+    pub dict_id: u8,
 }
 
 impl From<KanjiTuple> for Kanji {
@@ -31,6 +32,7 @@ impl From<KanjiTuple> for Kanji {
             tags: t.3,
             meanings: t.4,
             stats: t.5,
+            dict_id: 0,
         }
     }
 }
