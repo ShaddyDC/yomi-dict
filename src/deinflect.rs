@@ -146,7 +146,7 @@ pub fn string_deinflections(source: &str, reasons: &Reasons) -> Vec<Deinflection
     let substrings: Vec<String> = mutate(source)
         .iter()
         .flat_map(|s| {
-            (1..s.chars().count())
+            (1..=s.chars().count())
                 .rev()
                 .map(|i| &s[..s.chars().take(i).map(char::len_utf8).sum()])
         })
