@@ -27,3 +27,22 @@ async fn test_find_terms() {
         .iter()
         .any(|d| d.entries.iter().any(|d| d.term.expression == "聞く")));
 }
+
+#[wasm_bindgen_test]
+async fn test_no_duplicates() {
+    cleanup_db("test_no_duplicates").await;
+
+    let file = include_bytes!("dict.zip");
+
+    let dict = Dict::new(Cursor::new(file)).unwrap();
+    let reasons = inflection_reasons();
+
+    let db = DB::new("test_no_duplicates").await.unwrap();
+
+    db.add_dict(dict).await.unwrap();
+
+    let definitions = get_terms("no_reading", &reasons, &db).await.unwrap();
+
+    // Don't duplicate these
+    assert_eq!(definitions.first().unwrap().entries.len(), 1);
+}

@@ -1,12 +1,19 @@
 #![allow(clippy::future_not_send)]
 
 use futures::future::join_all;
+use itertools::Itertools;
 use rexie::{Index, ObjectStore, Rexie};
+use serde::Deserialize;
 
 use crate::{kanji_bank::Kanji, tag_bank::Tag, terms_bank::Term, Dict, YomiDictError};
 
 pub struct DB {
     rexie: Rexie,
+}
+
+#[derive(Deserialize)]
+pub struct IdObject {
+    id: u32,
 }
 
 impl DB {
@@ -164,6 +171,11 @@ impl DB {
             .into_iter()
             .filter_map(std::result::Result::ok)
             .filter(|obj| !obj.is_undefined())
+            .unique_by(|obj| {
+                serde_wasm_bindgen::from_value::<IdObject>(obj.clone())
+                    .expect("should have id")
+                    .id
+            })
             .map(|jobj| serde_wasm_bindgen::from_value(jobj).map_err(YomiDictError::JsobjError))
             .collect::<Result<Vec<_>, _>>()?;
 
