@@ -2,7 +2,7 @@
 
 use futures::future::join_all;
 use itertools::Itertools;
-use rexie::{Index, ObjectStore, Rexie};
+use rexie::{Index, KeyRange, ObjectStore, Rexie};
 use serde::Deserialize;
 
 use crate::{kanji_bank::Kanji, tag_bank::Tag, terms_bank::Term, Dict, YomiDictError};
@@ -157,24 +157,30 @@ impl DB {
 
         let term_list = term_list
             .into_iter()
-            .map(|s| serde_wasm_bindgen::to_value(s).map_err(YomiDictError::JsobjError))
+            .map(|s| {
+                serde_wasm_bindgen::to_value(s)
+                    .map_err(YomiDictError::JsobjError)
+                    .and_then(|s| KeyRange::only(&s).map_err(YomiDictError::StorageError))
+            })
             .collect::<Result<Vec<_>, _>>()?;
 
         let queries = join_all(
             term_list
                 .iter()
-                .flat_map(|s| indices.iter().map(|i| i.get(s))),
+                .flat_map(|s| indices.iter().map(|i| i.get_all(Some(s), None, None, None))),
         )
         .await;
 
         let terms = queries
             .into_iter()
             .filter_map(std::result::Result::ok)
-            .filter(|obj| !obj.is_undefined())
-            .unique_by(|obj| {
-                serde_wasm_bindgen::from_value::<IdObject>(obj.clone())
-                    .expect("should have id")
-                    .id
+            .flatten()
+            .map(|(_, obj)| obj)
+            .unique_by(|jobj| {
+                // TODO error handling
+                serde_wasm_bindgen::from_value::<IdObject>(jobj.clone())
+                    .map(|obj| obj.id)
+                    .unwrap_or(0)
             })
             .map(|jobj| serde_wasm_bindgen::from_value(jobj).map_err(YomiDictError::JsobjError))
             .collect::<Result<Vec<_>, _>>()?;

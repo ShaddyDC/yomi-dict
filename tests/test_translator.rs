@@ -46,3 +46,37 @@ async fn test_no_duplicates() {
     // Don't duplicate these
     assert_eq!(definitions.first().unwrap().entries.len(), 1);
 }
+
+#[wasm_bindgen_test]
+async fn test_multi_match() {
+    cleanup_db("test_multi_match").await;
+
+    let file = include_bytes!("dict.zip");
+
+    let dict = Dict::new(Cursor::new(file)).unwrap();
+    let reasons = inflection_reasons();
+
+    let db = DB::new("test_multi_match").await.unwrap();
+
+    db.add_dict(dict).await.unwrap();
+
+    let definitions = get_terms("すばやい", &reasons, &db).await.unwrap();
+
+    wasm_bindgen_test::console_log!("Definitions: {definitions:?}");
+
+    assert!(definitions
+        .iter()
+        .any(|d| d.entries.iter().any(|d| d.term.expression == "素早い")));
+
+    assert!(definitions
+        .iter()
+        .any(|d| d.entries.iter().any(|d| d.term.expression == "素速い")));
+
+    assert!(definitions
+        .iter()
+        .any(|d| d.entries.iter().any(|d| d.term.expression == "す早い")));
+
+    assert!(definitions
+        .iter()
+        .any(|d| d.entries.iter().any(|d| d.term.expression == "す速い")));
+}
