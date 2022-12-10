@@ -9,7 +9,7 @@ use wana_kana::{to_hiragana::to_hiragana, to_katakana::to_katakana};
 #[repr(u8)]
 #[derive(Deserialize, Serialize, Copy, Clone, Debug, PartialEq)]
 #[serde(rename_all = "kebab-case")]
-pub(crate) enum Rule {
+pub enum Rule {
     V1 = 0b0000_0001,   // Verb ichidan
     V5 = 0b0000_0010,   // Verb godan
     Vs = 0b0000_0100,   // Verb suru
@@ -37,7 +37,7 @@ impl TryFrom<&str> for Rule {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Rules(pub(crate) BitFlags<Rule>);
+pub struct Rules(pub BitFlags<Rule>);
 
 impl From<Vec<Rule>> for Rules {
     fn from(v: Vec<Rule>) -> Self {
@@ -111,7 +111,7 @@ pub fn word_deinflections(source: &str, reasons: &Reasons) -> Vec<Deinflection> 
 
         for (reason, variants) in &reasons.0 {
             let applicable_variants = variants.iter().filter(|v| {
-                (prev.rules.0.is_empty() || !(prev.rules.0 & v.rules_in.0).is_empty())
+                (prev.rules.0.is_empty() || prev.rules.0.intersects(v.rules_in.0))
                     && prev.term.ends_with(&v.kana_in)
                     && (prev.term.len() - v.kana_in.len() + v.kana_out.len() > 0)
             });
