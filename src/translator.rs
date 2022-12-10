@@ -51,8 +51,8 @@ pub async fn gather_terms(
 
             let mut reasons = deinflections
                 .iter()
-                .filter(|d| d.rules.0.is_empty() || !(d.rules.0 & term.rules.0).is_empty())
-                .sorted_unstable_by(|a, b| b.reasons.len().cmp(&a.reasons.len()));
+                .filter(|d| d.rules.0.is_empty() || d.rules.0.intersects(term.rules.0))
+                .sorted_unstable_by_key(|d| std::cmp::Reverse(d.reasons.len()));
 
             if let Some(d) = reasons.next() {
                 return Some(DictEntry {
