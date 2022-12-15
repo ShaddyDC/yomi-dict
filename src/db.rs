@@ -49,8 +49,7 @@ impl DB {
                     .auto_increment(true),
             )
             .build()
-            .await
-            .map_err(YomiDictError::StorageError)?;
+            .await?;
 
         Ok(Self { rexie })
     }
@@ -66,29 +65,19 @@ impl DB {
 
             let transaction = self
                 .rexie
-                .transaction(&[store], rexie::TransactionMode::ReadWrite)
-                .map_err(YomiDictError::StorageError)?;
+                .transaction(&[store], rexie::TransactionMode::ReadWrite)?;
 
-            let store = transaction
-                .store(store)
-                .map_err(YomiDictError::StorageError)?;
+            let store = transaction.store(store)?;
 
             for mut item in items {
                 item.set_dict_id(dict_id);
 
                 store
-                    .add(
-                        &serde_wasm_bindgen::to_value(&item).map_err(YomiDictError::JsobjError)?,
-                        None,
-                    )
-                    .await
-                    .map_err(YomiDictError::StorageError)?;
+                    .add(&serde_wasm_bindgen::to_value(&item)?, None)
+                    .await?;
             }
 
-            transaction
-                .commit()
-                .await
-                .map_err(YomiDictError::StorageError)?;
+            transaction.commit().await?;
 
             Ok(len)
         })
@@ -117,24 +106,15 @@ impl DB {
         // TODO Fail transaction on failure
         let transaction = self
             .rexie
-            .transaction(&["dictionaries"], rexie::TransactionMode::ReadWrite)
-            .map_err(YomiDictError::StorageError)?;
+            .transaction(&["dictionaries"], rexie::TransactionMode::ReadWrite)?;
 
-        let dictionaries = transaction
-            .store("dictionaries")
-            .map_err(YomiDictError::StorageError)?;
+        let dictionaries = transaction.store("dictionaries")?;
 
-        let dict_index = dictionaries
-            .index("title")
-            .map_err(YomiDictError::StorageError)?;
+        let dict_index = dictionaries.index("title")?;
 
         if !dict_index
-            .get(
-                &serde_wasm_bindgen::to_value(&dict.index.title)
-                    .map_err(YomiDictError::JsobjError)?,
-            )
-            .await
-            .map_err(YomiDictError::StorageError)?
+            .get(&serde_wasm_bindgen::to_value(&dict.index.title)?)
+            .await?
             .is_undefined()
         {
             return Ok(DictInsertionSteps {
@@ -144,20 +124,12 @@ impl DB {
         }
 
         let dict_id = dictionaries
-            .put(
-                &serde_wasm_bindgen::to_value(&dict.index).map_err(YomiDictError::JsobjError)?,
-                None,
-            )
-            .await
-            .map_err(YomiDictError::StorageError)?;
+            .put(&serde_wasm_bindgen::to_value(&dict.index)?, None)
+            .await?;
 
-        transaction
-            .commit()
-            .await
-            .map_err(YomiDictError::StorageError)?;
+        transaction.commit().await?;
 
-        let dict_id: u8 =
-            serde_wasm_bindgen::from_value(dict_id).map_err(YomiDictError::JsobjError)?;
+        let dict_id: u8 = serde_wasm_bindgen::from_value(dict_id)?;
 
         let total_count = dict.tags.len() + dict.terms.len() + dict.kanji.len();
         let mut steps = Vec::new();
@@ -195,28 +167,16 @@ impl DB {
     ) -> Result<Vec<Term>, YomiDictError> {
         let transaction = self
             .rexie
-            .transaction(&["terms"], rexie::TransactionMode::ReadOnly)
-            .map_err(YomiDictError::StorageError)?;
+            .transaction(&["terms"], rexie::TransactionMode::ReadOnly)?;
 
-        let terms = transaction
-            .store("terms")
-            .map_err(YomiDictError::StorageError)?;
+        let terms = transaction.store("terms")?;
 
-        let indices = vec![
-            terms
-                .index("expression")
-                .map_err(YomiDictError::StorageError)?,
-            terms
-                .index("reading")
-                .map_err(YomiDictError::StorageError)?,
-        ];
+        let indices = vec![terms.index("expression")?, terms.index("reading")?];
 
         let term_list = term_list
             .into_iter()
-            .map(|s| {
-                serde_wasm_bindgen::to_value(s)
-                    .map_err(YomiDictError::JsobjError)
-                    .and_then(|s| KeyRange::only(&s).map_err(YomiDictError::StorageError))
+            .map(|s| -> Result<KeyRange, YomiDictError> {
+                Ok(KeyRange::only(&serde_wasm_bindgen::to_value(s)?)?)
             })
             .collect::<Result<Vec<_>, _>>()?;
 
@@ -238,13 +198,10 @@ impl DB {
                     .map(|obj| obj.id)
                     .unwrap_or(0)
             })
-            .map(|jobj| serde_wasm_bindgen::from_value(jobj).map_err(YomiDictError::JsobjError))
+            .map(serde_wasm_bindgen::from_value)
             .collect::<Result<Vec<_>, _>>()?;
 
-        transaction
-            .done()
-            .await
-            .map_err(YomiDictError::StorageError)?;
+        transaction.done().await?;
 
         Ok(terms)
     }
