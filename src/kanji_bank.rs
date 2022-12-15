@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::dict_item::DictItem;
+
 #[derive(Deserialize, Debug)]
 pub struct KanjiTuple(
     String,
@@ -34,5 +36,11 @@ impl From<KanjiTuple> for Kanji {
             stats: t.5,
             dict_id: 0,
         }
+    }
+}
+
+impl DictItem for Kanji {
+    fn set_dict_id(&mut self, dict_id: u8) {
+        self.dict_id = dict_id;
     }
 }

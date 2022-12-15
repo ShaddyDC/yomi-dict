@@ -3,7 +3,10 @@ use std::cmp::Ordering;
 use enumflags2::BitFlags;
 use serde::{de::Error, Deserialize, Deserializer, Serialize};
 
-use crate::deinflect::{Rule, Rules};
+use crate::{
+    deinflect::{Rule, Rules},
+    dict_item::DictItem,
+};
 
 #[derive(Deserialize, Debug)]
 pub struct TermTuple(
@@ -85,5 +88,11 @@ impl From<TermTuple> for Term {
             term_tags: t.7,
             dict_id: 0,
         }
+    }
+}
+
+impl DictItem for Term {
+    fn set_dict_id(&mut self, dict_id: u8) {
+        self.dict_id = dict_id;
     }
 }

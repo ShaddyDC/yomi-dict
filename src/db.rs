@@ -1,11 +1,13 @@
 #![allow(clippy::future_not_send)]
 
-use futures::future::join_all;
+use std::pin::Pin;
+
+use futures::{future::join_all, Future};
 use itertools::Itertools;
 use rexie::{Index, KeyRange, ObjectStore, Rexie};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-use crate::{kanji_bank::Kanji, tag_bank::Tag, terms_bank::Term, Dict, YomiDictError};
+use crate::{dict_item::DictItem, terms_bank::Term, Dict, YomiDictError};
 
 pub struct DB {
     rexie: Rexie,
@@ -14,6 +16,13 @@ pub struct DB {
 #[derive(Deserialize)]
 pub struct IdObject {
     id: u32,
+}
+
+type StepFuture<'a> = dyn Future<Output = Result<usize, YomiDictError>> + 'a;
+
+pub struct DictInsertionSteps<'a> {
+    pub total_count: usize,
+    pub steps: Vec<Pin<Box<StepFuture<'a>>>>,
 }
 
 impl DB {
@@ -46,14 +55,69 @@ impl DB {
         Ok(Self { rexie })
     }
 
+    fn create_insertion_future<'a>(
+        &'a self,
+        store: &'a str,
+        dict_id: u8,
+        items: Vec<impl Serialize + DictItem + 'a>,
+    ) -> Pin<Box<dyn Future<Output = Result<usize, YomiDictError>> + 'a>> {
+        Box::pin(async move {
+            let len = items.len();
+
+            let transaction = self
+                .rexie
+                .transaction(&[store], rexie::TransactionMode::ReadWrite)
+                .map_err(YomiDictError::StorageError)?;
+
+            let store = transaction
+                .store(store)
+                .map_err(YomiDictError::StorageError)?;
+
+            for mut item in items {
+                item.set_dict_id(dict_id);
+
+                store
+                    .add(
+                        &serde_wasm_bindgen::to_value(&item).map_err(YomiDictError::JsobjError)?,
+                        None,
+                    )
+                    .await
+                    .map_err(YomiDictError::StorageError)?;
+            }
+
+            transaction
+                .commit()
+                .await
+                .map_err(YomiDictError::StorageError)?;
+
+            Ok(len)
+        })
+    }
+
     pub async fn add_dict(&self, dict: Dict) -> Result<(), YomiDictError> {
+        let steps = self.add_dict_stepwise(dict).await?;
+        let should_total = steps.total_count;
+
+        let total = join_all(steps.steps)
+            .await
+            .into_iter()
+            .sum::<Result<usize, _>>()?;
+
+        debug_assert_eq!(should_total, total);
+
+        Ok(())
+    }
+
+    pub async fn add_dict_stepwise(
+        &self,
+        dict: Dict,
+    ) -> Result<DictInsertionSteps<'_>, YomiDictError> {
+        const TRANSACTION_SIZE: usize = 1000;
+
         // TODO Fail transaction on failure
         let transaction = self
             .rexie
-            .transaction(
-                &["dictionaries", "tags", "terms", "kanji"],
-                rexie::TransactionMode::ReadWrite,
-            )
+            .transaction(&["dictionaries"], rexie::TransactionMode::ReadWrite)
             .map_err(YomiDictError::StorageError)?;
 
         let dictionaries = transaction
@@ -73,7 +137,10 @@ impl DB {
             .map_err(YomiDictError::StorageError)?
             .is_undefined()
         {
-            return Ok(()); // TODO duplicate error?
+            return Ok(DictInsertionSteps {
+                total_count: 0,
+                steps: vec![],
+            }); // TODO duplicate error?
         }
 
         let dict_id = dictionaries
@@ -84,53 +151,42 @@ impl DB {
             .await
             .map_err(YomiDictError::StorageError)?;
 
-        let dict_id: u8 =
-            serde_wasm_bindgen::from_value(dict_id).map_err(YomiDictError::JsobjError)?;
-
-        let tags = transaction
-            .store("tags")
-            .map_err(YomiDictError::StorageError)?;
-        for tag in dict.tags.into_iter().map(|t| Tag { dict_id, ..t }) {
-            tags.put(
-                &serde_wasm_bindgen::to_value(&tag).map_err(YomiDictError::JsobjError)?,
-                None,
-            )
-            .await
-            .map_err(YomiDictError::StorageError)?;
-        }
-
-        let terms = transaction
-            .store("terms")
-            .map_err(YomiDictError::StorageError)?;
-        for term in dict.terms.into_iter().map(|t| Term { dict_id, ..t }) {
-            terms
-                .put(
-                    &serde_wasm_bindgen::to_value(&term).map_err(YomiDictError::JsobjError)?,
-                    None,
-                )
-                .await
-                .map_err(YomiDictError::StorageError)?;
-        }
-
-        let kanjis = transaction
-            .store("kanji")
-            .map_err(YomiDictError::StorageError)?;
-        for kanji in dict.kanji.into_iter().map(|k| Kanji { dict_id, ..k }) {
-            kanjis
-                .put(
-                    &serde_wasm_bindgen::to_value(&kanji).map_err(YomiDictError::JsobjError)?,
-                    None,
-                )
-                .await
-                .map_err(YomiDictError::StorageError)?;
-        }
-
         transaction
             .commit()
             .await
             .map_err(YomiDictError::StorageError)?;
 
-        Ok(())
+        let dict_id: u8 =
+            serde_wasm_bindgen::from_value(dict_id).map_err(YomiDictError::JsobjError)?;
+
+        let total_count = dict.tags.len() + dict.terms.len() + dict.kanji.len();
+        let mut steps = Vec::new();
+
+        steps.extend(
+            dict.tags
+                .into_iter()
+                .chunks(TRANSACTION_SIZE)
+                .into_iter()
+                .map(|c| (self.create_insertion_future("tags", dict_id, c.collect_vec()))),
+        );
+
+        steps.extend(
+            dict.terms
+                .into_iter()
+                .chunks(TRANSACTION_SIZE)
+                .into_iter()
+                .map(|c| (self.create_insertion_future("terms", dict_id, c.collect_vec()))),
+        );
+
+        steps.extend(
+            dict.kanji
+                .into_iter()
+                .chunks(TRANSACTION_SIZE)
+                .into_iter()
+                .map(|c| (self.create_insertion_future("kanji", dict_id, c.collect_vec()))),
+        );
+
+        Ok(DictInsertionSteps { total_count, steps })
     }
 
     pub async fn get_terms(

@@ -1,5 +1,6 @@
 pub mod db;
 pub mod deinflect;
+mod dict_item;
 mod kanji_bank;
 mod tag_bank;
 mod terms_bank;

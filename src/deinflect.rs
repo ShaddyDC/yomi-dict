@@ -7,7 +7,7 @@ use wana_kana::{to_hiragana::to_hiragana, to_katakana::to_katakana};
 
 #[bitflags]
 #[repr(u8)]
-#[derive(Deserialize, Serialize, Copy, Clone, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Copy, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum Rule {
     V1 = 0b0000_0001,   // Verb ichidan
