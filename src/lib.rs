@@ -1,7 +1,7 @@
 pub mod db;
 pub mod deinflect;
 mod dict_item;
-pub mod error;
+mod error;
 mod kanji_bank;
 mod tag_bank;
 mod terms_bank;
@@ -12,7 +12,7 @@ use std::{
     path::Path,
 };
 
-use error::YomiDictError;
+pub use error::YomiDictError;
 use kanji_bank::Kanji;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
