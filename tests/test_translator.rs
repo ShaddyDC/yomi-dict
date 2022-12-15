@@ -62,8 +62,6 @@ async fn test_multi_match() {
 
     let definitions = get_terms("すばやい", &reasons, &db).await.unwrap();
 
-    wasm_bindgen_test::console_log!("Definitions: {definitions:?}");
-
     assert!(definitions
         .iter()
         .any(|d| d.entries.iter().any(|d| d.term.expression == "素早い")));
