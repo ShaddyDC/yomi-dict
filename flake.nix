@@ -23,10 +23,6 @@
             name = "rust-env";
             # Build-time Additional Dependencies
             nativeBuildInputs = [
-              cargo
-              rustfmt
-              rust-analyzer
-              clippy
               wasm-pack
               pkgconfig
               openssl
@@ -43,6 +39,11 @@
 
             # Set Environment Variables
             RUST_BACKTRACE = 1;
+
+            shellHook = ''
+              alias test-wasm="wasm-pack test --headless --firefox --chrome"
+              alias test="cargo test --all"
+            '';
           };
         }
       );
