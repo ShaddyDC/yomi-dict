@@ -2,7 +2,7 @@ use std::io::Cursor;
 
 use rexie::Rexie;
 use wasm_bindgen_test::wasm_bindgen_test;
-use yomi_dict::{db::DB, deinflect::inflection_reasons, translator::get_terms, *};
+use yomi_dict::{deinflect::inflection_reasons, translator::get_terms, DB, *};
 
 async fn cleanup_db(name: &str) {
     Rexie::delete(name).await.unwrap();
@@ -17,7 +17,7 @@ async fn test_find_terms() {
     let dict = Dict::new(Cursor::new(file)).unwrap();
     let reasons = inflection_reasons();
 
-    let db = DB::new("test_find_terms").await.unwrap();
+    let db = IndexedDB::new("test_find_terms").await.unwrap();
 
     db.add_dict(dict).await.unwrap();
 
@@ -37,7 +37,7 @@ async fn test_no_duplicates() {
     let dict = Dict::new(Cursor::new(file)).unwrap();
     let reasons = inflection_reasons();
 
-    let db = DB::new("test_no_duplicates").await.unwrap();
+    let db = IndexedDB::new("test_no_duplicates").await.unwrap();
 
     db.add_dict(dict).await.unwrap();
 
@@ -56,7 +56,7 @@ async fn test_multi_match() {
     let dict = Dict::new(Cursor::new(file)).unwrap();
     let reasons = inflection_reasons();
 
-    let db = DB::new("test_multi_match").await.unwrap();
+    let db = IndexedDB::new("test_multi_match").await.unwrap();
 
     db.add_dict(dict).await.unwrap();
 

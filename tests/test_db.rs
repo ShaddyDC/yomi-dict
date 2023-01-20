@@ -2,7 +2,7 @@ use std::io::Cursor;
 
 use rexie::Rexie;
 use wasm_bindgen_test::wasm_bindgen_test;
-use yomi_dict::{db::DB, Dict};
+use yomi_dict::{Dict, IndexedDB, DB};
 
 async fn cleanup_db(name: &str) {
     Rexie::delete(name).await.unwrap();
@@ -16,7 +16,7 @@ async fn test_db_steps() {
 
     let dict = Dict::new(Cursor::new(file)).unwrap();
 
-    let db = DB::new("test_db_steps").await.unwrap();
+    let db = IndexedDB::new("test_db_steps").await.unwrap();
 
     let steps = db.add_dict_stepwise(dict).await.unwrap();
 

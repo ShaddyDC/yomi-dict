@@ -25,7 +25,7 @@ pub struct DictEntries {
 pub async fn gather_terms(
     text: &str,
     reasons: &Reasons,
-    db: &DB,
+    db: &impl DB,
 ) -> Result<Vec<DictEntry>, YomiDictError> {
     let deinflections = string_deinflections(text, reasons);
 
@@ -73,7 +73,7 @@ pub async fn gather_terms(
 pub async fn get_terms(
     text: &str,
     reasons: &Reasons,
-    db: &DB,
+    db: &impl DB,
 ) -> Result<Vec<DictEntries>, YomiDictError> {
     let entries = gather_terms(text, reasons, db).await?;
 
