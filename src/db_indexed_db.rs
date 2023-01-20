@@ -1,3 +1,4 @@
+#![allow(clippy::future_not_send)]
 use std::pin::Pin;
 
 use async_trait::async_trait;

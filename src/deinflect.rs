@@ -31,7 +31,7 @@ impl TryFrom<&str> for Rule {
             "vz" => Ok(Self::Vz),
             "adj-i" => Ok(Self::AdjI),
             "iru" => Ok(Self::Iru),
-            _ => Err(format!("String `{}` is not a valid Rule", value)),
+            _ => Err(format!("String `{value}` is not a valid Rule")),
         }
     }
 }
@@ -103,11 +103,12 @@ pub trait Deinflectable {
 }
 
 impl Deinflectable for &str {
+    /// Get all possible deinflections of the given word (the entire string) given the list of rules.
     fn word_deinflections(&self, reasons: &Reasons) -> Vec<Deinflection> {
         let mut results = vec![Deinflection::new(
-            self.to_string(),
+            (*self).to_string(),
             Rules(BitFlags::<Rule>::empty()),
-            self.to_string(),
+            (*self).to_string(),
             vec![],
         )];
 
@@ -131,7 +132,7 @@ impl Deinflectable for &str {
                             .to_string()
                             + (&v.kana_out),
                         v.rules_out.clone(),
-                        self.to_string(),
+                        (*self).to_string(),
                         std::iter::once(reason.clone())
                             .chain(prev.reasons.iter().cloned())
                             .collect(),
@@ -142,6 +143,8 @@ impl Deinflectable for &str {
 
         results
     }
+
+    /// Get all possible deinflections of the given string and its prefixes given the list of rules.
     fn string_deinflections(&self, reasons: &Reasons) -> Vec<Deinflection> {
         let substrings: Vec<String> = mutate(self)
             .iter()

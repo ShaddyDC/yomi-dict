@@ -1,3 +1,4 @@
+#![allow(clippy::future_not_send)]
 use std::collections::HashMap;
 
 use itertools::Itertools;
@@ -60,8 +61,7 @@ pub async fn get_raw_terms(
             let derivation = derivations.and_then(|(derivations, primary_match)| {
                 derivations
                     .iter()
-                    .filter(|d| d.rules.0.is_empty() || d.rules.0.intersects(term.rules.0))
-                    .next()
+                    .find(|d| d.rules.0.is_empty() || d.rules.0.intersects(term.rules.0))
                     .map(|d| (d, primary_match))
             });
 

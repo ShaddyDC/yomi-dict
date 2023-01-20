@@ -1,3 +1,4 @@
+#![allow(clippy::future_not_send)]
 use std::pin::Pin;
 
 use async_trait::async_trait;
@@ -38,6 +39,7 @@ pub trait DB {
 
 #[async_trait(?Send)]
 impl<T: DBImpl> DB for T {
+    /// Add the dictionary to the database
     async fn add_dict(&self, dict: Dict) -> Result<(), YomiDictError> {
         let steps = self.add_dict_stepwise(dict).await?;
         let should_total = steps.total_count;
@@ -52,10 +54,15 @@ impl<T: DBImpl> DB for T {
         Ok(())
     }
 
+    /// Gives a list of steps that need to be awaited to add the dictionary to the database.
+    /// This is to allow informing the user of progress.
+    /// Note that not completing all steps will leave the database in an incomplete state.
     async fn add_dict_stepwise(&self, dict: Dict) -> Result<DictInsertionSteps<'_>, YomiDictError> {
         self.add_dict_stepwise(dict).await
     }
 
+    /// Give a list of all possible terms that could be found at the beginning of the input text.
+    /// Performs deinflecting and grouping.
     async fn find_terms(
         &self,
         text: &str,

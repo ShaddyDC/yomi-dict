@@ -21,29 +21,29 @@ pub enum YomiDictError {
 
 impl From<rexie::Error> for YomiDictError {
     fn from(e: rexie::Error) -> Self {
-        YomiDictError::StorageError(e)
+        Self::StorageError(e)
     }
 }
 
 impl From<serde_json::Error> for YomiDictError {
     fn from(e: serde_json::Error) -> Self {
-        YomiDictError::JsonError(e)
+        Self::JsonError(e)
     }
 }
 
 impl From<serde_wasm_bindgen::Error> for YomiDictError {
     fn from(e: serde_wasm_bindgen::Error) -> Self {
-        YomiDictError::JsobjError(e)
+        Self::JsobjError(e)
     }
 }
 
 impl From<ZipError> for YomiDictError {
     fn from(e: ZipError) -> Self {
         match e {
-            ZipError::InvalidArchive(s) => YomiDictError::InvalidArchive(s),
-            ZipError::UnsupportedArchive(s) => YomiDictError::UnsupportedArchive(s),
-            ZipError::Io(e) => YomiDictError::Io(e),
-            ZipError::FileNotFound => YomiDictError::UnsupportedArchive("Unknown error occured"),
+            ZipError::InvalidArchive(s) => Self::InvalidArchive(s),
+            ZipError::UnsupportedArchive(s) => Self::UnsupportedArchive(s),
+            ZipError::Io(e) => Self::Io(e),
+            ZipError::FileNotFound => Self::UnsupportedArchive("Unknown error occured"),
         }
     }
 }
