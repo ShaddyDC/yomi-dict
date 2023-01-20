@@ -2,12 +2,7 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 
-use crate::{
-    db::DBImpl,
-    deinflect::{string_deinflections, Reasons},
-    terms_bank::Term,
-    YomiDictError,
-};
+use crate::{db::DBImpl, deinflect::Reasons, terms_bank::Term, Deinflectable, YomiDictError};
 
 #[derive(Debug)]
 pub struct DictEntry {
@@ -31,7 +26,7 @@ pub async fn get_raw_terms(
     reasons: &Reasons,
     db: &impl DBImpl,
 ) -> Result<Vec<DictEntry>, YomiDictError> {
-    let text_deinflections = string_deinflections(text, reasons);
+    let text_deinflections = text.string_deinflections(reasons);
 
     let lookup_strings = text_deinflections.iter().map(|d| d.term.as_str());
 

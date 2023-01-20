@@ -2,7 +2,7 @@ use std::io::Cursor;
 
 use rexie::Rexie;
 use wasm_bindgen_test::wasm_bindgen_test;
-use yomi_dict::{deinflect::inflection_reasons, Dict, IndexedDB, DB};
+use yomi_dict::{inflection_reasons, Dict, IndexedDB, DB};
 
 async fn cleanup_db(name: &str) {
     Rexie::delete(name).await.unwrap();
