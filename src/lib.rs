@@ -1,7 +1,7 @@
 mod db;
 mod db_indexed_db;
 pub mod deinflect;
-pub mod dict;
+mod dict;
 mod dict_item;
 mod error;
 mod kanji_bank;

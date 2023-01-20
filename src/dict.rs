@@ -3,9 +3,9 @@ use std::{
     path::Path,
 };
 
-pub use crate::error::YomiDictError;
 use crate::kanji_bank::Kanji;
 use crate::terms_bank::Term;
+use crate::YomiDictError;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
