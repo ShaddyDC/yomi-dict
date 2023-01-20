@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
 use itertools::Itertools;
 
 use crate::{
-    db::DB,
+    db::DBImpl,
     deinflect::{string_deinflections, Reasons},
     terms_bank::Term,
     YomiDictError,
@@ -22,70 +24,82 @@ pub struct DictEntries {
     pub entries: Vec<DictEntry>,
 }
 
-pub async fn gather_terms(
+/// Returns a list of terms that could be derived by deinflecting the input text or its substrings.
+/// Returned is a list of all matching dictionary entries with the rules for the match
+pub async fn get_raw_terms(
     text: &str,
     reasons: &Reasons,
-    db: &impl DB,
+    db: &impl DBImpl,
 ) -> Result<Vec<DictEntry>, YomiDictError> {
-    let deinflections = string_deinflections(text, reasons);
+    let text_deinflections = string_deinflections(text, reasons);
 
-    let strings = deinflections.iter().map(|d| d.term.as_str());
+    let lookup_strings = text_deinflections.iter().map(|d| d.term.as_str());
 
-    let deinflections = deinflections
+    let term_derivations = text_deinflections
         .iter()
-        .into_grouping_map_by(|d| &d.term)
-        .collect::<Vec<_>>();
+        .into_group_map_by(|d| &d.term)
+        .into_iter()
+        .map(|(s, v)| {
+            (
+                s,
+                v.into_iter()
+                    .sorted_unstable_by_key(|d| std::cmp::Reverse(d.reasons.len()))
+                    .collect_vec(),
+            )
+        })
+        .collect::<HashMap<_, _>>();
 
     let terms = db
-        .get_terms(strings)
+        .get_raw_matches(lookup_strings)
         .await?
         .into_iter()
         .filter_map(|term| {
-            let (deinflections, primary_match) = if deinflections.contains_key(&term.expression) {
-                (&deinflections[&term.expression], true)
-            } else if deinflections.contains_key(&term.reading) {
-                (&deinflections[&term.reading], false)
+            let derivations = if term_derivations.contains_key(&term.expression) {
+                Some((&term_derivations[&term.expression], true))
+            } else if term_derivations.contains_key(&term.reading) {
+                Some((&term_derivations[&term.reading], false))
             } else {
-                panic!("One of these should always be given");
+                None // Terms should be retrieved from db by exact match of either expression or reading
             };
 
-            let mut reasons = deinflections
-                .iter()
-                .filter(|d| d.rules.0.is_empty() || d.rules.0.intersects(term.rules.0))
-                .sorted_unstable_by_key(|d| std::cmp::Reverse(d.reasons.len()));
+            let derivation = derivations.and_then(|(derivations, primary_match)| {
+                derivations
+                    .iter()
+                    .filter(|d| d.rules.0.is_empty() || d.rules.0.intersects(term.rules.0))
+                    .next()
+                    .map(|d| (d, primary_match))
+            });
 
-            if let Some(d) = reasons.next() {
-                return Some(DictEntry {
-                    term,
-                    reasons: d.reasons.clone(),
-                    source_len: d.source.chars().count(),
-                    primary_match,
-                });
-            }
-
-            None
+            derivation.map(|(d, primary_match)| DictEntry {
+                term,
+                reasons: d.reasons.clone(),
+                source_len: d.source.chars().count(),
+                primary_match,
+            })
         })
         .collect();
 
     Ok(terms)
 }
 
-pub async fn get_terms(
+/// Returns a list of terms that could be derived by deinflecting the input text or its substrings.
+/// The list is processed to be grouped. Groups share an identical expression and reading.
+pub async fn get_grouped_terms(
     text: &str,
     reasons: &Reasons,
-    db: &impl DB,
+    db: &impl DBImpl,
 ) -> Result<Vec<DictEntries>, YomiDictError> {
-    let entries = gather_terms(text, reasons, db).await?;
+    let entries = get_raw_terms(text, reasons, db).await?;
 
     let terms = entries
         .into_iter()
         .into_group_map_by(|t| (t.term.expression.clone(), t.term.reading.clone()))
         .into_iter()
-        .map(|(key, entries)| {
+        .map(|((expression, reading), entries)| {
             // Sort definitions in same word
             DictEntries {
-                expression: key.0,
-                reading: key.1,
+                expression,
+                reading,
                 entries: entries
                     .into_iter()
                     .sorted_unstable_by_key(|e| {
@@ -109,7 +123,7 @@ pub async fn get_terms(
                 std::cmp::Reverse(e.entries[0].term.glossary.len()),
             )
         })
-        .collect::<Vec<_>>();
+        .collect_vec();
 
     Ok(terms)
 }

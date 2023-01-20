@@ -7,7 +7,7 @@ mod error;
 mod kanji_bank;
 mod tag_bank;
 mod terms_bank;
-pub mod translator;
+mod translator;
 
 pub use crate::db::DB;
 pub use crate::db_indexed_db::IndexedDB;

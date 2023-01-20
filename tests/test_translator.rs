@@ -2,7 +2,7 @@ use std::io::Cursor;
 
 use rexie::Rexie;
 use wasm_bindgen_test::wasm_bindgen_test;
-use yomi_dict::{deinflect::inflection_reasons, translator::get_terms, DB, *};
+use yomi_dict::{deinflect::inflection_reasons, Dict, IndexedDB, DB};
 
 async fn cleanup_db(name: &str) {
     Rexie::delete(name).await.unwrap();
@@ -21,7 +21,7 @@ async fn test_find_terms() {
 
     db.add_dict(dict).await.unwrap();
 
-    let definitions = get_terms("聞かれましたか", &reasons, &db).await.unwrap();
+    let definitions = db.find_terms("聞かれましたか", &reasons).await.unwrap();
 
     assert!(definitions
         .iter()
@@ -41,9 +41,10 @@ async fn test_no_duplicates() {
 
     db.add_dict(dict).await.unwrap();
 
-    let definitions = get_terms("no_reading", &reasons, &db).await.unwrap();
+    let definitions = db.find_terms("no_reading", &reasons).await.unwrap();
 
     // Don't duplicate these
+    assert_eq!(definitions.len(), 1);
     assert_eq!(definitions.first().unwrap().entries.len(), 1);
 }
 
@@ -60,7 +61,7 @@ async fn test_multi_match() {
 
     db.add_dict(dict).await.unwrap();
 
-    let definitions = get_terms("すばやい", &reasons, &db).await.unwrap();
+    let definitions = db.find_terms("すばやい", &reasons).await.unwrap();
 
     assert!(definitions
         .iter()

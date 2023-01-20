@@ -1,5 +1,3 @@
-#![allow(clippy::future_not_send)]
-
 use std::pin::Pin;
 
 use async_trait::async_trait;
@@ -9,7 +7,10 @@ use rexie::{Index, KeyRange, ObjectStore, Rexie};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    db::DictInsertionSteps, dict_item::DictItem, terms_bank::Term, Dict, YomiDictError, DB,
+    db::{DBImpl, DictInsertionSteps},
+    dict_item::DictItem,
+    terms_bank::Term,
+    Dict, YomiDictError,
 };
 
 pub struct IndexedDB {
@@ -81,21 +82,7 @@ impl IndexedDB {
 }
 
 #[async_trait(?Send)]
-impl DB for IndexedDB {
-    async fn add_dict(&self, dict: Dict) -> Result<(), YomiDictError> {
-        let steps = self.add_dict_stepwise(dict).await?;
-        let should_total = steps.total_count;
-
-        let total = join_all(steps.steps)
-            .await
-            .into_iter()
-            .sum::<Result<usize, _>>()?;
-
-        debug_assert_eq!(should_total, total);
-
-        Ok(())
-    }
-
+impl DBImpl for IndexedDB {
     async fn add_dict_stepwise(&self, dict: Dict) -> Result<DictInsertionSteps<'_>, YomiDictError> {
         const TRANSACTION_SIZE: usize = 1000;
 
@@ -157,7 +144,7 @@ impl DB for IndexedDB {
         Ok(DictInsertionSteps { total_count, steps })
     }
 
-    async fn get_terms(
+    async fn get_raw_matches(
         &self,
         term_list: impl IntoIterator<Item = &str>,
     ) -> Result<Vec<Term>, YomiDictError> {
