@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use enumflags2::{bitflags, BitFlags};
 use itertools::Itertools;
 use serde::{Deserialize, Deserializer, Serialize};
-use wana_kana::{to_hiragana::to_hiragana, to_katakana::to_katakana};
+use wana_kana::ConvertJapanese;
 
 #[bitflags]
 #[repr(u8)]
@@ -166,7 +166,7 @@ impl Deinflectable for &str {
 
 fn mutate(s: &str) -> Vec<String> {
     // TODO Collapse emphatic sequensec
-    vec![s.to_owned(), to_hiragana(s), to_katakana(s)]
+    vec![s.to_owned(), s.to_hiragana(), s.to_katakana()]
 }
 #[cfg(test)]
 mod tests {
