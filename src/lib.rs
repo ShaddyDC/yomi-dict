@@ -11,7 +11,7 @@ mod translator;
 
 pub use crate::db::DB;
 pub use crate::db_indexed_db::IndexedDB;
-pub use crate::deinflect::inflection_reasons;
-pub use crate::deinflect::Deinflectable;
+pub use crate::deinflect::{inflection_reasons, Deinflectable, Reasons};
 pub use crate::dict::Dict;
 pub use crate::error::YomiDictError;
+pub use crate::translator::{DictEntries, DictEntry};
