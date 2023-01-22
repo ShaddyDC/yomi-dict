@@ -39,7 +39,12 @@ pub async fn get_raw_terms(
             (
                 s,
                 v.into_iter()
-                    .sorted_unstable_by_key(|d| std::cmp::Reverse(d.reasons.len()))
+                    .sorted_unstable_by_key(|d| {
+                        (
+                            std::cmp::Reverse(d.source.chars().count()),
+                            std::cmp::Reverse(d.reasons.len()),
+                        )
+                    })
                     .collect_vec(),
             )
         })

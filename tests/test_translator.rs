@@ -29,6 +29,29 @@ async fn test_find_terms() {
 }
 
 #[wasm_bindgen_test]
+async fn test_longest_deinflection() {
+    cleanup_db("test_longest_deinflection").await;
+
+    let file = include_bytes!("dict.zip");
+
+    let dict = Dict::new(Cursor::new(file)).unwrap();
+    let reasons = inflection_reasons();
+
+    let db = IndexedDB::new("test_longest_deinflection").await.unwrap();
+
+    db.add_dict(dict).await.unwrap();
+
+    let definitions = db.find_terms("している", &reasons).await.unwrap();
+    let def = definitions.iter().find(|d| d.expression == "為る");
+
+    assert!(def.is_some());
+
+    let def = def.unwrap();
+
+    assert_eq!(def.entries[0].source_len, 4);
+}
+
+#[wasm_bindgen_test]
 async fn test_no_duplicates() {
     cleanup_db("test_no_duplicates").await;
 
