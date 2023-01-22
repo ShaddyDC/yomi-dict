@@ -43,6 +43,7 @@
             shellHook = ''
               alias test-wasm="wasm-pack test --headless --firefox --chrome"
               alias test="cargo test --all"
+              alias clippy="cargo clippy -- -W clippy::nursery -W clippy::pedantic"
             '';
           };
         }
